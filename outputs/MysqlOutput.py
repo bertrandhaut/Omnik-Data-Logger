@@ -25,6 +25,9 @@ class MysqlOutput(PluginLoader.Plugin):
         if not isinstance(messages, list):
             messages = [messages]
 
+        # keep only messages associated to non sleeping mode
+        messages = [m for m in messages if not m.sleeping_inverter]
+
         with con:
             cur = con.cursor()
             self.logger.debug('Executing SQL statement on database')

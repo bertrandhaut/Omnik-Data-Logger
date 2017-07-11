@@ -191,3 +191,13 @@ class InverterMsg(object):
     def h_total(self):
         """Hours the inverter generated electricity"""
         return int(self.__get_long(75, 1))  # Don't divide
+
+    @property
+    def sleeping_inverter(self):
+        """Does the message correspond to a sleeping inverter?"""
+
+        # return True if all frequency are 0.0
+        for i in range(1, 4):
+            if self.f_ac(i) != 0:
+                return False
+        return True
