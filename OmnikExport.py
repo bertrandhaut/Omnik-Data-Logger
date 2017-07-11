@@ -85,7 +85,7 @@ class OmnikExport(object):
         query_period = float(self.config.get('general', 'query_period'))
 
         messages = []
-        for _ in range(number_queries):
+        for i in range(number_queries):
             msg = self.fetch_single_measurement()
             messages.append(msg)
 
@@ -97,7 +97,8 @@ class OmnikExport(object):
                     self.logger.debug('Run plugin' + plugin.__class__.__name__)
                     plugin.process_message(msg)
 
-            sleep(query_period)
+            if i != number_queries -1:
+                sleep(query_period)
 
         # process plugins which do support multiple outputs
         for plugin in Plugin.plugins:
