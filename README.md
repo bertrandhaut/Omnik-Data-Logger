@@ -3,10 +3,14 @@
 Omnik Data Logger is a small script for uploading data from a Omniksol Solar 
 inverter, equipped with a wifi module, to a database and/or to PVoutput.org. 
 
-This script is designed to be run as a cronjob every minute. Every time this
-script is run the data from the inverter will be send to the database. And with
-a five minute interval the data will also be uploaded to PVoutput.org as a live
+This script is designed to be run as a cronjob every few minutes.
+
+Every time this script is run the data from the inverter will be send to the database.
+And with a five minute interval the data will also be uploaded to PVoutput.org as a live
 status.
+
+To limit the pressure on the DB, the script can also be configured to perform a certain number of queries before
+sending the data. In that case, coherent settings should be set for the cronjob, number_queries and query_period.
 
 ## Supported inverters
 Users reported that this script works for wifi kits with a s/n starting with

@@ -36,3 +36,5 @@ class Plugin(object):
 
     config = None
     logger = None
+
+    support_multiple_output = False

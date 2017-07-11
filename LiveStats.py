@@ -12,6 +12,8 @@ if __name__ == "__main__":
 
     omnik_exporter.override_config('general', 'enabled_plugins',
                                    'ConsoleOutput')
+    omnik_exporter.override_config('general', 'number_queries', '1')
+
     omnik_exporter.override_config('log', 'type', 'console')
     omnik_exporter.override_config('log', 'level', 'debug')
     omnik_exporter.run()

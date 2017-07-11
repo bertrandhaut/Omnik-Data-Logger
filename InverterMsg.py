@@ -1,4 +1,5 @@
 import struct  # Converting bytes to numbers
+import datetime
 
 
 class InverterMsg(object):
@@ -7,6 +8,7 @@ class InverterMsg(object):
 
     def __init__(self, msg, offset=0):
         self.raw_msg = msg
+        self.timestamp = datetime.datetime.now()
         self.offset = offset
 
     def __get_string(self, begin, end):

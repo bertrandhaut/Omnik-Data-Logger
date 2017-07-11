@@ -10,6 +10,8 @@ import logging
 import logging.config
 import ConfigParser
 import os
+from time import sleep
+
 from PluginLoader import Plugin
 import InverterMsg  # Import the Msg handler
 
@@ -32,6 +34,34 @@ class OmnikExport(object):
         self.config = ConfigParser.RawConfigParser()
         self.config.read(config_files)
 
+    def fetch_single_measurement(self):
+        # Connect to inverter
+        ip = self.config.get('inverter', 'ip')
+        port = self.config.get('inverter', 'port')
+        timeout = self.config.getfloat('inverter', 'timeout')
+
+        for res in socket.getaddrinfo(ip, port, socket.AF_INET,
+                                      socket.SOCK_STREAM):
+            family, socktype, proto, canonname, sockadress = res
+            try:
+                self.logger.info('connecting to {0} port {1}'.format(ip, port))
+                inverter_socket = socket.socket(family, socktype, proto)
+                inverter_socket.settimeout(timeout)
+                inverter_socket.connect(sockadress)
+            except socket.error as msg:
+                self.logger.error('Could not open socket')
+                self.logger.error(msg)
+                sys.exit(1)
+
+        wifi_serial = self.config.getint('inverter', 'wifi_sn')
+        inverter_socket.sendall(OmnikExport.generate_string(wifi_serial))
+        data = inverter_socket.recv(1024)
+        inverter_socket.close()
+
+        msg = InverterMsg.InverterMsg(data)
+
+        return msg
+
     def run(self):
         """Get information from inverter and store is configured outputs."""
 
@@ -51,35 +81,29 @@ class OmnikExport(object):
             self.logger.debug('Importing output plugin ' + plugin_name)
             __import__(plugin_name)
 
-        # Connect to inverter
-        ip = self.config.get('inverter', 'ip')
-        port = self.config.get('inverter', 'port')
+        number_queries = int(self.config.get('general', 'number_queries'))
+        query_period = float(self.config.get('general', 'query_period'))
 
-        for res in socket.getaddrinfo(ip, port, socket.AF_INET,
-                                      socket.SOCK_STREAM):
-            family, socktype, proto, canonname, sockadress = res
-            try:
-                self.logger.info('connecting to {0} port {1}'.format(ip, port))
-                inverter_socket = socket.socket(family, socktype, proto)
-                inverter_socket.settimeout(10)
-                inverter_socket.connect(sockadress)
-            except socket.error as msg:
-                self.logger.error('Could not open socket')
-                self.logger.error(msg)
-                sys.exit(1)
+        messages = []
+        for _ in range(number_queries):
+            msg = self.fetch_single_measurement()
+            messages.append(msg)
 
-        wifi_serial = self.config.getint('inverter', 'wifi_sn')
-        inverter_socket.sendall(OmnikExport.generate_string(wifi_serial))
-        data = inverter_socket.recv(1024)
-        inverter_socket.close()
+            self.logger.info("ID: {0}".format(msg.id))
 
-        msg = InverterMsg.InverterMsg(data)
+            # process plugins which don't support multiple outputs
+            for plugin in Plugin.plugins:
+                if not plugin.support_multiple_output:
+                    self.logger.debug('Run plugin' + plugin.__class__.__name__)
+                    plugin.process_message(msg)
 
-        self.logger.info("ID: {0}".format(msg.id))
+            sleep(query_period)
 
+        # process plugins which do support multiple outputs
         for plugin in Plugin.plugins:
-            self.logger.debug('Run plugin' + plugin.__class__.__name__)
-            plugin.process_message(msg)
+            if plugin.support_multiple_output:
+                self.logger.debug('Run plugin' + plugin.__class__.__name__)
+                plugin.process_message(messages)
 
     def build_logger(self, config):
         # Build logger
